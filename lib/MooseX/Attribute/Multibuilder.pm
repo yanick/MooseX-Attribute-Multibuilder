@@ -44,7 +44,7 @@ use warnings;
 
 use Moose::Role;
 
-use List::Util 1.29 qw/ pairmap /;
+use List::Util 1.29 qw/ pairmap pairgrep /;
 
 has multibuilder => (
     is       => 'ro',
@@ -60,18 +60,18 @@ before _process_options => sub {
         my $self = shift;
         my %values = %{ $self->$builder };
 
-        while( my ( $attr, $val ) = each %values ) {
-            my $obj = $self->meta->get_attribute($attr) or next;
-            $obj->set_value($self,$val)
-                unless $obj->has_value($self);
-        }
+        pairmap  { $a->set_value($self, $b ) }
+        pairgrep { not $a->has_value($self) }
+        pairmap  { $self->meta->get_attribute($a) => $b }
+                 %values;
 
         return $values{$name};
     };
 };
 
 {
-    package Moose::Meta::Attribute::Custom::Trait::Multibuilder;
+    package
+        Moose::Meta::Attribute::Custom::Trait::Multibuilder;
 
     sub register_implementation { 'MooseX::Attribute::Multibuilder' }
 
